@@ -9,7 +9,7 @@
 <body>
   <header class="hero">
     <p class="eyebrow">CCE 270 // SIGNALS IN MOTION</p>
-    <h1>Neon Fourier Lab</h1>
+    <h1>Fourier Series Computation</h1>
     <p>Turn equations, SVG paths, and sketches into harmonics.</p>
     <nav class="mode-switcher" aria-label="Choose a computation mode">
       <button type="button" class="mode-button" data-mode="equation-panel">Use equation mode</button>
@@ -34,10 +34,10 @@
           <input id="right-bound" type="number" value="3.14159" step="any">
         </label>
         <label>Partial sum n = <output id="equation-n-output">12</output>
-          <input id="equation-n" type="range" min="1" max="40" value="12">
+          <input id="equation-n" type="range" min="1" max="100" value="12">
         </label>
         <label>Set n manually
-          <input id="equation-n-manual" type="number" min="1" max="40" value="12" step="1">
+          <input id="equation-n-manual" type="number" min="1" max="100" value="12" step="1">
         </label>
         <button type="submit">Compute series</button>
       </form>
@@ -55,20 +55,8 @@
         <div><span class="mode-number">02</span><h2 id="shape-title">Complex-plane trace</h2></div>
         <p>Build an epicycle animation from a path or a closed sketch.</p>
       </div>
-      <div class="tabs" role="tablist">
-        <button class="tab active" data-tab="svg-tab" role="tab">SVG path</button>
-        <button class="tab" data-tab="draw-tab" role="tab">Draw a loop</button>
-      </div>
-      <div id="svg-tab" class="tab-content active">
-        <div class="controls">
-          <label>SVG file
-            <input id="svg-file" type="file" accept=".svg,image/svg+xml">
-          </label>
-          <button id="load-example" type="button">Load Quake.svg</button>
-        </div>
-      </div>
-      <div id="draw-tab" class="tab-content">
-        <p class="hint">Drag with the line tool. Your final point is connected to the first point automatically.</p>
+      <div id="draw-tab" class="tab-content active">
+        <p class="hint">Draw one or more line segments. Separate strokes connect from end to start, and the final stroke connects back to the first stroke's start.</p>
         <canvas id="draw-canvas" class="draw-canvas" width="700" height="260"></canvas>
         <div class="controls"><button id="clear-drawing" type="button">Clear sketch</button><button id="use-drawing" type="button">Animate sketch</button></div>
       </div>
@@ -85,9 +73,9 @@
       </div>
       <div id="shape-error" class="error" role="alert"></div>
       <canvas id="complex-canvas" width="900" height="560"></canvas>
-      <div id="shape-status" class="status">Choose an SVG or draw a loop to begin.</div>
+      <div id="shape-status" class="status">Draw a loop to begin.</div>
     </section>
   </main>
-  <script type="module" src="app.js"></script>
+  <script src="app.js?v=20261118-direct-coordinates" defer></script>
 </body>
 </html>

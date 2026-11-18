@@ -1,7 +1,7 @@
 const TAU = Math.PI * 2;
 const CONFIG = Object.freeze({
-  equation: Object.freeze({ maxHarmonic: 40, samples: 1200 }),
-  shape: Object.freeze({ pathSamples: 1000, defaultFrequency: 35 }),
+  equation: Object.freeze({ maxHarmonic: 100, samples: 1200 }),
+  shape: Object.freeze({ defaultFrequency: 35 }),
   supportedFunctions: Object.freeze(["sin", "cos", "tan", "exp", "log", "sqrt", "abs"]),
 });
 const FUNCTIONS = Object.fromEntries(CONFIG.supportedFunctions.map(name => [name, Math[name]]));
@@ -20,7 +20,7 @@ function tokenize(source) {
   return tokens;
 }
 
-export function compileExpression(source) {
+function compileExpression(source) {
   const text = source.replace(/^\s*y\s*=\s*/i, "");
   const tokens = tokenize(text);
   let index = 0;
@@ -87,7 +87,7 @@ export function compileExpression(source) {
   return result;
 }
 
-export function computeFourier(fn, left, right, maxN = CONFIG.equation.maxHarmonic, samples = CONFIG.equation.samples) {
+function computeFourier(fn, left, right, maxN = CONFIG.equation.maxHarmonic, samples = CONFIG.equation.samples) {
   if (!(right > left)) throw new Error("The right bound must be greater than the left bound.");
   const length = right - left;
   const values = Array.from({ length: samples }, (_, k) => {
@@ -110,7 +110,7 @@ export function computeFourier(fn, left, right, maxN = CONFIG.equation.maxHarmon
   return { values, coefficients, left, right, length, samples };
 }
 
-export function dft(points, maxFrequency = 50) {
+function dft(points, maxFrequency = 50) {
   const coefficients = [];
   for (let n = -maxFrequency; n <= maxFrequency; n++) {
     let real = 0, imaginary = 0;
@@ -125,15 +125,51 @@ export function dft(points, maxFrequency = 50) {
   return coefficients.sort((a, b) => b.amplitude - a.amplitude);
 }
 
-export function closeLoop(points) {
+function closeLoop(points) {
   if (points.length < 2) return points.slice();
   const first = points[0], last = points[points.length - 1];
   if (first.x === last.x && first.y === last.y) return points.slice();
   return points.concat({ ...first });
 }
 
+function connectDrawnSegments(segments) {
+  const usable = segments.map(segment => segment.filter((point, index, points) =>
+    index === 0 || point.x !== points[index - 1].x || point.y !== points[index - 1].y
+  )).filter(segment => segment.length > 0);
+  if (usable.length === 0) return [];
+
+  const points = [];
+  usable.forEach((segment, index) => {
+    if (index > 0) {
+      points.push({ ...usable[index - 1][usable[index - 1].length - 1] }, { ...segment[0] });
+    }
+    points.push(...segment);
+  });
+
+  if (points.length > 1) points.push({ ...points[0] });
+  return points;
+}
+
 if (typeof document !== "undefined") {
 const $ = id => document.getElementById(id);
+function openMode(activeMode) {
+  document.querySelectorAll(".mode-button").forEach(button => {
+    const isActive = button.dataset.mode === activeMode;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+  document.querySelectorAll(".mode-panel").forEach(panel => {
+    const isActive = panel.id === activeMode;
+    panel.hidden = !isActive;
+    panel.setAttribute("aria-hidden", String(!isActive));
+  });
+  if (activeMode !== "shape-panel") animation = null;
+  const panel = $(activeMode);
+  if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+document.querySelectorAll(".mode-button").forEach(button => {
+  button.addEventListener("click", () => openMode(button.dataset.mode));
+});
 const equationN = $("equation-n");
 const equationNManual = $("equation-n-manual");
 let equationData = null;
@@ -179,32 +215,68 @@ function drawEquation(data, selectedN) {
 
 function drawGraph(canvas, points, left, right, minY, maxY, color) {
   const ctx = canvas.getContext("2d"), width = canvas.width, height = canvas.height;
-  ctx.clearRect(0, 0, width, height); ctx.strokeStyle = "rgba(145,167,199,.25)"; ctx.lineWidth = 1;
-  const range = Math.max(maxY - minY, 1e-8), mapX = x => (x - left) / (right - left) * width, mapY = y => height - (y - minY) / range * height;
-  ctx.beginPath(); ctx.moveTo(0, mapY(0)); ctx.lineTo(width, mapY(0)); ctx.stroke();
+  ctx.clearRect(0, 0, width, height);
+  const range = Math.max(maxY - minY, 1e-8);
+  const paddedMinY = Math.min(minY, 0) - range * 0.08;
+  const paddedMaxY = Math.max(maxY, 0) + range * 0.08;
+  const paddedRange = paddedMaxY - paddedMinY;
+  const plotLeft = 58, plotRight = width - 18, plotTop = 18, plotBottom = height - 42;
+  const mapX = x => plotLeft + (x - left) / (right - left) * (plotRight - plotLeft);
+  const mapY = y => plotBottom - (y - paddedMinY) / paddedRange * (plotBottom - plotTop);
+  const niceStep = (span, targetTicks = 8) => {
+    const rough = span / targetTicks;
+    const power = Math.pow(10, Math.floor(Math.log10(Math.max(rough, 1e-12))));
+    const fraction = rough / power;
+    const factor = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10;
+    return factor * power;
+  };
+
+  const xStep = niceStep(right - left);
+  const yStep = niceStep(paddedRange);
+  ctx.font = "12px Segoe UI";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  ctx.strokeStyle = "rgba(145,167,199,.16)";
+  ctx.fillStyle = "rgba(231,247,255,.72)";
+  ctx.lineWidth = 1;
+  for (let y = Math.ceil(paddedMinY / yStep) * yStep; y <= paddedMaxY + yStep * 0.5; y += yStep) {
+    const py = mapY(y);
+    ctx.beginPath(); ctx.moveTo(plotLeft, py); ctx.lineTo(plotRight, py); ctx.stroke();
+    ctx.fillText(Number(y.toPrecision(6)).toString(), plotLeft - 8, py);
+  }
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  for (let x = Math.ceil(left / xStep) * xStep; x <= right + xStep * 0.5; x += xStep) {
+    const px = mapX(x);
+    ctx.beginPath(); ctx.moveTo(px, plotTop); ctx.lineTo(px, plotBottom); ctx.stroke();
+    ctx.fillText(Number(x.toPrecision(6)).toString(), px, plotBottom + 8);
+  }
+  ctx.strokeStyle = "rgba(231,247,255,.55)";
+  ctx.beginPath(); ctx.moveTo(plotLeft, plotTop); ctx.lineTo(plotLeft, plotBottom); ctx.lineTo(plotRight, plotBottom); ctx.stroke();
+
+  if (paddedMinY <= 0 && paddedMaxY >= 0) {
+    ctx.strokeStyle = "rgba(231,247,255,.38)";
+    ctx.beginPath(); ctx.moveTo(plotLeft, mapY(0)); ctx.lineTo(plotRight, mapY(0)); ctx.stroke();
+  }
+  ctx.textAlign = "center";
+  ctx.fillStyle = "rgba(231,247,255,.72)";
+  ctx.fillText("x", (plotLeft + plotRight) / 2, height - 16);
   ctx.strokeStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 10; ctx.lineWidth = 2; ctx.beginPath();
   points.forEach((point, index) => index ? ctx.lineTo(mapX(point.x), mapY(point.y)) : ctx.moveTo(mapX(point.x), mapY(point.y)));
   ctx.stroke(); ctx.shadowBlur = 0;
 }
 
 let animation = null, drawing = [];
-document.querySelectorAll(".mode-button").forEach(button => button.addEventListener("click", () => {
-  const activeMode = button.dataset.mode;
-  document.querySelectorAll(".mode-button").forEach(item => item.classList.toggle("active", item === button));
-  document.querySelectorAll(".mode-panel").forEach(panel => {
-    const isActive = panel.id === activeMode;
-    panel.hidden = !isActive;
-    panel.setAttribute("aria-hidden", String(!isActive));
-  });
-  if (activeMode !== "shape-panel") animation = null;
-}));
 function setShape(points, label) {
   const closed = closeLoop(points);
   if (closed.length < 3) throw new Error("Add at least two line segments.");
   const bounds = closed.reduce((acc, point) => ({ minX: Math.min(acc.minX, point.x), maxX: Math.max(acc.maxX, point.x), minY: Math.min(acc.minY, point.y), maxY: Math.max(acc.maxY, point.y) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
   const centerX = (bounds.minX + bounds.maxX) / 2, centerY = (bounds.minY + bounds.maxY) / 2;
   const scale = 240 / Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY, 1);
-  const normalized = closed.slice(0, -1).map(point => ({ x: (point.x - centerX) * scale, y: -(point.y - centerY) * scale }));
+  const normalized = closed.slice(0, -1).map(point => ({
+    x: (point.x - centerX) * scale,
+    y: (point.y - centerY) * scale,
+  }));
   const count = Number($("arrow-count").value);
   animation = { coefficients: dft(normalized, count), points: normalized, phase: 0, trail: [], lastTime: performance.now(), label };
   $("shape-error").textContent = "";
@@ -218,7 +290,9 @@ function renderAnimation(now) {
   animation.lastTime = now;
   if (!$("pause-animation").dataset.paused) animation.phase = (animation.phase + elapsed * Number($("speed").value) * .15) % 1;
   const ctx = $("complex-canvas").getContext("2d"), width = ctx.canvas.width, height = ctx.canvas.height;
-  ctx.clearRect(0, 0, width, height); ctx.save(); ctx.translate(width / 2, height / 2);
+  ctx.clearRect(0, 0, width, height);
+  ctx.save();
+  ctx.translate(width / 2, height / 2);
   let x = 0, y = 0; ctx.lineWidth = 1;
   for (const coefficient of animation.coefficients) {
     const radius = coefficient.amplitude, angle = TAU * coefficient.n * animation.phase + coefficient.phase;
@@ -239,42 +313,66 @@ $("arrow-count").addEventListener("input", () => $("arrow-output").value = $("ar
 $("pause-animation").addEventListener("click", event => {
   const button = event.currentTarget; button.dataset.paused = button.dataset.paused ? "" : "true"; button.textContent = button.dataset.paused ? "Resume" : "Pause";
 });
-document.querySelectorAll(".tab").forEach(button => button.addEventListener("click", () => {
-  document.querySelectorAll(".tab, .tab-content").forEach(item => item.classList.remove("active"));
-  button.classList.add("active"); $(button.dataset.tab).classList.add("active");
-}));
-
-async function loadSvgText(text, label) {
-  try {
-    const doc = new DOMParser().parseFromString(text, "image/svg+xml");
-    if (doc.querySelector("parsererror")) throw new Error("The SVG could not be parsed.");
-    const source = doc.querySelector("path");
-    if (!source) throw new Error("This SVG does not contain a path element.");
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.style.position = "fixed"; svg.style.left = "-10000px"; svg.append(source.cloneNode(true)); document.body.append(svg);
-    const path = svg.querySelector("path"), total = path.getTotalLength(), samples = CONFIG.shape.pathSamples;
-    const points = Array.from({ length: samples }, (_, index) => { const point = path.getPointAtLength(total * index / samples); return { x: point.x, y: point.y }; });
-    svg.remove(); setShape(points, label);
-  } catch (error) { $("shape-error").textContent = error.message; }
-}
-$("svg-file").addEventListener("change", async event => {
-  const file = event.target.files[0]; if (file) loadSvgText(await file.text(), file.name);
-});
-$("load-example").addEventListener("click", async () => loadSvgText(await (await fetch("Quake.svg")).text(), "Quake.svg"));
-
 const drawCanvas = $("draw-canvas"), drawContext = drawCanvas.getContext("2d");
-let isDrawing = false;
+let isDrawing = false, drawingSegments = [], currentSegment = [];
 function drawPoint(event) {
   const rect = drawCanvas.getBoundingClientRect();
   return { x: (event.clientX - rect.left) * drawCanvas.width / rect.width, y: (event.clientY - rect.top) * drawCanvas.height / rect.height };
 }
-drawCanvas.addEventListener("pointerdown", event => { isDrawing = true; drawing = [drawPoint(event)]; drawCanvas.setPointerCapture(event.pointerId); });
+function redrawDrawing() {
+  drawContext.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+  drawContext.strokeStyle = "#62f4ff";
+  drawContext.lineWidth = 2;
+  drawingSegments.forEach(segment => {
+    if (segment.length < 2) return;
+    drawContext.beginPath();
+    drawContext.moveTo(segment[0].x, segment[0].y);
+    segment.slice(1).forEach(point => drawContext.lineTo(point.x, point.y));
+    drawContext.stroke();
+  });
+
+  if (drawingSegments.length > 1) {
+    drawContext.strokeStyle = "rgba(255,92,204,.95)";
+    drawContext.setLineDash([7, 7]);
+    drawingSegments.slice(1).forEach((segment, index) => {
+      const previous = drawingSegments[index];
+      drawContext.beginPath();
+      drawContext.moveTo(previous[previous.length - 1].x, previous[previous.length - 1].y);
+      drawContext.lineTo(segment[0].x, segment[0].y);
+      drawContext.stroke();
+    });
+    if (drawingSegments[drawingSegments.length - 1].length > 0) {
+      const finalSegment = drawingSegments[drawingSegments.length - 1];
+      const firstSegment = drawingSegments[0];
+      drawContext.beginPath();
+      drawContext.moveTo(finalSegment[finalSegment.length - 1].x, finalSegment[finalSegment.length - 1].y);
+      drawContext.lineTo(firstSegment[0].x, firstSegment[0].y);
+      drawContext.stroke();
+    }
+    drawContext.setLineDash([]);
+  }
+}
+drawCanvas.addEventListener("pointerdown", event => {
+  isDrawing = true;
+  currentSegment = [drawPoint(event)];
+  drawingSegments.push(currentSegment);
+  redrawDrawing();
+  drawCanvas.setPointerCapture(event.pointerId);
+});
 drawCanvas.addEventListener("pointermove", event => {
-  if (!isDrawing) return; const point = drawPoint(event), previous = drawing[drawing.length - 1];
-  if (Math.hypot(point.x - previous.x, point.y - previous.y) < 2) return; drawing.push(point);
-  drawContext.strokeStyle = "#62f4ff"; drawContext.lineWidth = 2; drawContext.beginPath(); drawContext.moveTo(previous.x, previous.y); drawContext.lineTo(point.x, point.y); drawContext.stroke();
+  if (!isDrawing) return; const point = drawPoint(event), previous = currentSegment[currentSegment.length - 1];
+  if (Math.hypot(point.x - previous.x, point.y - previous.y) < 2) return;
+  currentSegment.push(point);
+  redrawDrawing();
 });
 drawCanvas.addEventListener("pointerup", () => { isDrawing = false; });
-$("clear-drawing").addEventListener("click", () => { drawing = []; drawContext.clearRect(0, 0, drawCanvas.width, drawCanvas.height); });
-$("use-drawing").addEventListener("click", () => { try { setShape(drawing, "Freehand loop"); } catch (error) { $("shape-error").textContent = error.message; } });
+$("clear-drawing").addEventListener("click", () => { drawing = []; drawingSegments = []; currentSegment = []; redrawDrawing(); });
+$("use-drawing").addEventListener("click", () => {
+  try {
+    const connected = connectDrawnSegments(drawingSegments);
+    if (connected.length < 3) throw new Error("Draw at least one line segment.");
+    drawing = connected;
+    setShape(drawing, "Freehand loop");
+  } catch (error) { $("shape-error").textContent = error.message; }
+});
 }

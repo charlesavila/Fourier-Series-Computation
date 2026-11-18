@@ -33,14 +33,15 @@
 - Update the approximation and coefficient display when the slider changes.
 - Show the calculated coefficient values in a readable table.
 
-## Stage 5: Build SVG import and path sampling
+## Stage 5: Build the drawing-only complex-plane input
 
-- Add an SVG file upload control.
-- Parse the uploaded SVG in the browser.
-- Select the primary supported `<path>` element.
-- Sample evenly spaced points along the path.
-- Center and scale the sampled points for the complex-plane canvas.
-- Validate unsupported SVGs and show useful errors.
+- Keep SVG upload out of the interface.
+- Add a pointer-based drawing canvas for one or more line segments.
+- Capture each pointer stroke as a separate ordered segment.
+- Connect the end of each segment to the start of the next segment.
+- Connect the final segment back to the start of the first segment.
+- Center and scale the completed loop for the complex-plane canvas.
+- Validate empty and insufficient drawings with useful errors.
 
 ## Stage 6: Implement the complex Fourier transform
 
@@ -78,7 +79,7 @@
 ## Stage 10: Validate and refine
 
 - Run automated tests for equation parsing, Fourier coefficients, loop closure, SVG parsing, and DFT calculations.
-- Validate the imported `Quake.svg` fixture.
+- Validate the drawing-only complex-plane workflow with multiple line segments.
 - Confirm that invalid equations, missing SVG paths, empty drawings, and invalid bounds fail clearly.
 - Check animation performance with different arrow counts and sample sizes.
 - Perform a final visual and usability review.
