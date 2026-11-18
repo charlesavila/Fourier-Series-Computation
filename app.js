@@ -266,10 +266,11 @@ function drawGraph(canvas, points, left, right, minY, maxY, color) {
   ctx.stroke(); ctx.shadowBlur = 0;
 }
 
-let animation = null, drawing = [];
+let animation = null, drawing = [], animationFrameId = null;
 function setShape(points, label) {
   const closed = closeLoop(points);
   if (closed.length < 3) throw new Error("Add at least two line segments.");
+  if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
   const bounds = closed.reduce((acc, point) => ({ minX: Math.min(acc.minX, point.x), maxX: Math.max(acc.maxX, point.x), minY: Math.min(acc.minY, point.y), maxY: Math.max(acc.maxY, point.y) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
   const centerX = (bounds.minX + bounds.maxX) / 2, centerY = (bounds.minY + bounds.maxY) / 2;
   const scale = 240 / Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY, 1);
@@ -281,7 +282,7 @@ function setShape(points, label) {
   animation = { coefficients: dft(normalized, count), points: normalized, phase: 0, trail: [], lastTime: performance.now(), label };
   $("shape-error").textContent = "";
   $("shape-status").textContent = `${label}: ${normalized.length} samples, ${count * 2 + 1} frequencies`;
-  requestAnimationFrame(renderAnimation);
+  animationFrameId = requestAnimationFrame(renderAnimation);
 }
 
 function renderAnimation(now) {
@@ -304,12 +305,17 @@ function renderAnimation(now) {
   ctx.strokeStyle = "#f7f08a"; ctx.lineWidth = 2; ctx.beginPath();
   animation.trail.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y)); ctx.stroke();
   ctx.fillStyle = "#62f4ff"; ctx.beginPath(); ctx.arc(x, y, 4, 0, TAU); ctx.fill(); ctx.restore();
-  requestAnimationFrame(renderAnimation);
+  animationFrameId = requestAnimationFrame(renderAnimation);
 }
 
 $("equation-form").dispatchEvent(new Event("submit"));
 $("speed").addEventListener("input", () => $("speed-output").value = `${Number($("speed").value).toFixed(1)}x`);
-$("arrow-count").addEventListener("input", () => $("arrow-output").value = $("arrow-count").value);
+$("arrow-count").addEventListener("input", () => {
+  $("arrow-output").value = $("arrow-count").value;
+  if (drawing.length >= 3) {
+    try { setShape(drawing, "Freehand loop"); } catch (error) { $("shape-error").textContent = error.message; }
+  }
+});
 $("pause-animation").addEventListener("click", event => {
   const button = event.currentTarget; button.dataset.paused = button.dataset.paused ? "" : "true"; button.textContent = button.dataset.paused ? "Resume" : "Pause";
 });
