@@ -1,5 +1,10 @@
 const TAU = Math.PI * 2;
-const FUNCTIONS = { sin: Math.sin, cos: Math.cos, tan: Math.tan, exp: Math.exp, log: Math.log, sqrt: Math.sqrt, abs: Math.abs };
+const CONFIG = Object.freeze({
+  equation: Object.freeze({ maxHarmonic: 40, samples: 1200 }),
+  shape: Object.freeze({ pathSamples: 1000, defaultFrequency: 35 }),
+  supportedFunctions: Object.freeze(["sin", "cos", "tan", "exp", "log", "sqrt", "abs"]),
+});
+const FUNCTIONS = Object.fromEntries(CONFIG.supportedFunctions.map(name => [name, Math[name]]));
 
 function tokenize(source) {
   const tokens = [];
@@ -82,7 +87,7 @@ export function compileExpression(source) {
   return result;
 }
 
-export function computeFourier(fn, left, right, maxN = 40, samples = 1200) {
+export function computeFourier(fn, left, right, maxN = CONFIG.equation.maxHarmonic, samples = CONFIG.equation.samples) {
   if (!(right > left)) throw new Error("The right bound must be greater than the left bound.");
   const length = right - left;
   const values = Array.from({ length: samples }, (_, k) => {
@@ -130,13 +135,26 @@ export function closeLoop(points) {
 if (typeof document !== "undefined") {
 const $ = id => document.getElementById(id);
 const equationN = $("equation-n");
-equationN.addEventListener("input", () => $("equation-n-output").value = equationN.value);
+const equationNManual = $("equation-n-manual");
+let equationData = null;
+function setEquationN(value) {
+  const parsed = Number.parseInt(value, 10);
+  const selectedN = Number.isFinite(parsed) ? Math.min(CONFIG.equation.maxHarmonic, Math.max(1, parsed)) : 1;
+  equationN.value = selectedN;
+  equationNManual.value = selectedN;
+  $("equation-n-output").textContent = selectedN;
+  if (equationData) drawEquation(equationData, selectedN);
+}
+equationN.addEventListener("input", () => setEquationN(equationN.value));
+equationNManual.addEventListener("input", () => setEquationN(equationNManual.value));
 $("equation-form").addEventListener("submit", event => {
   event.preventDefault();
+  event.stopPropagation();
   try {
     const fn = compileExpression($("equation-input").value);
-    const data = computeFourier(fn, Number($("left-bound").value), Number($("right-bound").value), 40);
-    drawEquation(data, Number(equationN.value));
+    const data = computeFourier(fn, Number($("left-bound").value), Number($("right-bound").value), CONFIG.equation.maxHarmonic, CONFIG.equation.samples);
+    equationData = data;
+    setEquationN(equationN.value);
     $("equation-error").textContent = "";
   } catch (error) { $("equation-error").textContent = error.message; }
 });
@@ -170,6 +188,16 @@ function drawGraph(canvas, points, left, right, minY, maxY, color) {
 }
 
 let animation = null, drawing = [];
+document.querySelectorAll(".mode-button").forEach(button => button.addEventListener("click", () => {
+  const activeMode = button.dataset.mode;
+  document.querySelectorAll(".mode-button").forEach(item => item.classList.toggle("active", item === button));
+  document.querySelectorAll(".mode-panel").forEach(panel => {
+    const isActive = panel.id === activeMode;
+    panel.hidden = !isActive;
+    panel.setAttribute("aria-hidden", String(!isActive));
+  });
+  if (activeMode !== "shape-panel") animation = null;
+}));
 function setShape(points, label) {
   const closed = closeLoop(points);
   if (closed.length < 3) throw new Error("Add at least two line segments.");
@@ -224,7 +252,7 @@ async function loadSvgText(text, label) {
     if (!source) throw new Error("This SVG does not contain a path element.");
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.style.position = "fixed"; svg.style.left = "-10000px"; svg.append(source.cloneNode(true)); document.body.append(svg);
-    const path = svg.querySelector("path"), total = path.getTotalLength(), samples = 1000;
+    const path = svg.querySelector("path"), total = path.getTotalLength(), samples = CONFIG.shape.pathSamples;
     const points = Array.from({ length: samples }, (_, index) => { const point = path.getPointAtLength(total * index / samples); return { x: point.x, y: point.y }; });
     svg.remove(); setShape(points, label);
   } catch (error) { $("shape-error").textContent = error.message; }

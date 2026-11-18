@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Neon Fourier Lab</title>
+  <title>Fourier Series Computation</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,12 +11,16 @@
     <p class="eyebrow">CCE 270 // SIGNALS IN MOTION</p>
     <h1>Neon Fourier Lab</h1>
     <p>Turn equations, SVG paths, and sketches into harmonics.</p>
+    <nav class="mode-switcher" aria-label="Choose a computation mode">
+      <button type="button" class="mode-button" data-mode="equation-panel">Use equation mode</button>
+      <button type="button" class="mode-button" data-mode="shape-panel">Use complex-plane mode</button>
+    </nav>
   </header>
 
   <main>
-    <section class="panel equation-panel">
+    <section id="equation-panel" class="panel mode-panel equation-panel" aria-labelledby="equation-title" hidden>
       <div class="section-heading">
-        <div><span class="mode-number">01</span><h2>Periodic equation</h2></div>
+        <div><span class="mode-number">01</span><h2 id="equation-title">Periodic equation</h2></div>
         <p>Analyze a bounded function as a periodic signal.</p>
       </div>
       <form id="equation-form" class="controls">
@@ -32,6 +36,9 @@
         <label>Partial sum n = <output id="equation-n-output">12</output>
           <input id="equation-n" type="range" min="1" max="40" value="12">
         </label>
+        <label>Set n manually
+          <input id="equation-n-manual" type="number" min="1" max="40" value="12" step="1">
+        </label>
         <button type="submit">Compute series</button>
       </form>
       <p class="hint">Supports x, +, -, *, /, ^, parentheses, sin, cos, tan, exp, log, sqrt, abs, pi, and e.</p>
@@ -43,9 +50,9 @@
       <div id="coefficient-table" class="coefficient-table"></div>
     </section>
 
-    <section class="panel shape-panel">
+    <section id="shape-panel" class="panel mode-panel shape-panel" aria-labelledby="shape-title" hidden>
       <div class="section-heading">
-        <div><span class="mode-number">02</span><h2>Complex-plane trace</h2></div>
+        <div><span class="mode-number">02</span><h2 id="shape-title">Complex-plane trace</h2></div>
         <p>Build an epicycle animation from a path or a closed sketch.</p>
       </div>
       <div class="tabs" role="tablist">

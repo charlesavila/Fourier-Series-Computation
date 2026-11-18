@@ -19,6 +19,9 @@ body {
 }
 .hero, main { width: min(1200px, calc(100% - 32px)); margin: auto; }
 .hero { padding: 48px 0 28px; }
+.mode-switcher { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.mode-button { color: var(--cyan); border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px; }
+.mode-button:hover, .mode-button:focus-visible, .mode-button.active { color: var(--text); border-color: var(--pink); box-shadow: 0 0 14px rgba(255,92,204,.35); }
 .eyebrow, .mode-number { color: var(--cyan); letter-spacing: .18em; font-weight: 700; }
 h1, h2, h3 { margin: 0; font-family: "Trebuchet MS", sans-serif; }
 h1 { color: var(--cyan); font-size: clamp(2.4rem, 6vw, 4.8rem); text-shadow: 0 0 24px rgba(98,244,255,.55); }
@@ -31,6 +34,7 @@ h3 { color: var(--yellow); font-size: 1rem; margin-bottom: 8px; }
 .controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; }
 label { display: grid; gap: 5px; color: var(--muted); font-size: .82rem; }
 input:not([type="range"]) { width: 180px; }
+input[type="number"] { width: 100px; }
 input { accent-color: var(--pink); }
 input:not([type="range"]), button { border: 1px solid rgba(98,244,255,.35); border-radius: 7px; background: var(--panel-2); color: var(--text); padding: 9px 11px; }
 button { cursor: pointer; font-weight: 700; }

@@ -2,12 +2,16 @@
 
 ## Stage 1: Define the foundation
 
+**Status: Complete**
+
 - Confirm the browser-based technology and file structure.
 - Define the neon-retro visual theme, page layout, and navigation between modes.
 - Decide the numerical defaults, including equation samples, SVG samples, and maximum harmonic count.
 - Define supported equation syntax and user-facing error messages.
 
 ## Stage 2: Build the equation input
+
+**Status: Complete**
 
 - Add inputs for the equation and its left and right bounds.
 - Validate the bounds and equation syntax.
