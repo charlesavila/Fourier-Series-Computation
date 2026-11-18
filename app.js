@@ -359,6 +359,7 @@ function redrawDrawing() {
   }
 }
 drawCanvas.addEventListener("pointerdown", event => {
+  event.preventDefault();
   isDrawing = true;
   currentSegment = [drawPoint(event)];
   drawingSegments.push(currentSegment);
@@ -366,7 +367,9 @@ drawCanvas.addEventListener("pointerdown", event => {
   drawCanvas.setPointerCapture(event.pointerId);
 });
 drawCanvas.addEventListener("pointermove", event => {
-  if (!isDrawing) return; const point = drawPoint(event), previous = currentSegment[currentSegment.length - 1];
+  if (!isDrawing) return;
+  event.preventDefault();
+  const point = drawPoint(event), previous = currentSegment[currentSegment.length - 1];
   if (Math.hypot(point.x - previous.x, point.y - previous.y) < 2) return;
   currentSegment.push(point);
   redrawDrawing();

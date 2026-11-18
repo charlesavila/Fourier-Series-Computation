@@ -52,7 +52,13 @@ th { color: var(--cyan); position: sticky; top: 0; background: var(--panel); }
 .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
-.draw-canvas { cursor: crosshair; }
+.draw-canvas {
+  cursor: crosshair;
+  touch-action: none;
+  overscroll-behavior: contain;
+  -webkit-user-select: none;
+  user-select: none;
+}
 #complex-canvas { margin-top: 18px; }
 .status { margin-top: 10px; }
 output { color: var(--yellow); font-weight: 700; }
