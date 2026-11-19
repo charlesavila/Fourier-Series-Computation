@@ -53,9 +53,13 @@ th { color: var(--cyan); position: sticky; top: 0; background: var(--panel); }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 .draw-canvas {
+  position: relative;
+  z-index: 2;
   cursor: crosshair;
   touch-action: none;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: auto;
+  -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
 }

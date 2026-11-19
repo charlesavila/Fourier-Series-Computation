@@ -375,6 +375,9 @@ drawCanvas.addEventListener("pointermove", event => {
   redrawDrawing();
 });
 drawCanvas.addEventListener("pointerup", () => { isDrawing = false; });
+
+drawCanvas.addEventListener("touchstart", event => event.preventDefault(), { passive: false });
+drawCanvas.addEventListener("touchmove", event => event.preventDefault(), { passive: false });
 $("clear-drawing").addEventListener("click", () => { drawing = []; drawingSegments = []; currentSegment = []; redrawDrawing(); });
 $("use-drawing").addEventListener("click", () => {
   try {
